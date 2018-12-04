@@ -19,17 +19,9 @@ var io = require('socket.io')(server)
 io.on('connection', (socket) => {
 
     findOpenRoom(socket)
-
-
-    // console.log("user joined the game")
-    // console.log(rooms)
-    // console.log("\n")
     
     socket.on('disconnect', () => {
         leaveGame(socket.id)
-        // console.log("user left the game")
-        // console.log(rooms)
-        // console.log("\n")
     })
 
     socket.on('newMsg', function(data){
@@ -37,7 +29,19 @@ io.on('connection', (socket) => {
     })
     
     socket.on("userClicked", function(data){
-        io.to(data.ID).emit("updatedGame", {world : data.worldArr, turn : data.turn, isGameOver : data.isGameOver})
+        io.to(data.ID).emit("updatedGame", {world : data.worldArr, turn : data.turn, isGameOver : data.isGameOver, winner : data.winner})
+    })
+
+    socket.on('reset', function(data){
+        io.to(data).emit('reset')
+    })
+
+    socket.on('newGameChat', function(data){
+        io.to(data.ID).emit('newGameChat', data)
+    })
+
+    socket.on('newWorldChat', function(data){
+        io.emit('newWorldChat', data)
     })
 })
 
@@ -64,7 +68,6 @@ function findOpenRoom(socket){
         socket.emit("welcome", {roomID : rooms[rooms.length - 1].roomID, playerNumber : 1})
 
     }
-
 }
 
 function leaveGame(id){

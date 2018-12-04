@@ -21,14 +21,17 @@
             })
 
 
-            //socket logic
+            //these variables will track the room ID, whether or not the game is over,
+            //and whose turn it is to play
             var roomID;
+            var winner;
             var gameOver = false
             var playerNumber;
+            var playerID = makeid()
             var playerTurn = 1
             var socket = io()
             var world = [[0,0,0],[0,0,0],[0,0,0]]
-            var worldDict = {0 : "yellow", 1 : "blue", 2 : "red"}
+            var worldDict = {0 : "hidden", 1 : "x", 2 : "y"}
 
             socket.on('welcome', (data) => {
                 roomID = data.roomID
@@ -42,6 +45,7 @@
             })
 
             socket.on("updatedGame", function(data){
+                
                 world = data.world
                 gameOver = data.isGameOver
                 playerTurn = data.turn
@@ -49,12 +53,19 @@
                 var cell = 1
                 for (var i = 0; i < data.world.length; i++){
                     for (var j = 0; j < data.world.length; j++){
-                        console.log("our cell is " + cell)
-                        console.log("our color is  " + worldDict[i][j])
                         
-                        $('#' + String(cell)).css('background-color', worldDict[world[i][j]])
+                        var displayStyle = worldDict[world[i][j]]
+                        if (displayStyle != 'hidden'){
+                            $('#' + String(cell)).children('#' + displayStyle).css({'display' : 'block', 'width' : '100%' })
+                            // $('#' + String(cell))
+                        }
+                        console.log(displayStyle)
+                        // $('#' + String(cell)).css('background-color', worldDict[world[i][j]])
                         cell++
                     }
+                }
+                if (data.winner > 0 && data.winner != playerNumber) {
+                    alert("You lost :(")
                 }
             })
 
@@ -63,9 +74,10 @@
             })
 
 
-            //game logic
+            //logic for updating the game board every time the user clicks a cell
             $('.d').click(function(){
-                console.log(world)
+
+                //only allow the user to click if it's their turn and the game isn't over
                 if (playerTurn == playerNumber && world[$(this).attr('row')][$(this).attr('column')] == 0 && !gameOver){
                     $(this).css("background-color", worldDict[playerNumber])
                     world[$(this).attr('row')][$(this).attr('column')] = playerNumber
@@ -75,15 +87,44 @@
                     else {
                         playerTurn = 1
                     }
-                    detectWinner()
-                    socket.emit('userClicked', {ID : roomID, worldArr : world, turn : playerTurn, isGameOver : gameOver})
+                    var winner = detectWinner()
+                    socket.emit('userClicked', {ID : roomID, worldArr : world, turn : playerTurn, isGameOver : gameOver, winner : winner})
+                    if (winner > 0){
+                        alert("You won!!")
+                    }
                 }
-                // else if (playerTurn == 1 && world[$(this).attr('row')][$(this).attr('column')] == 0) {
-                //     $(this).css("background-color", 'red')
-                //     world[$(this).attr('row')][$(this).attr('column')] = 2
-                //     playerTurn = 0
-                // }
             })
+
+
+            //resetting the game
+            $("#reset").click(function(){
+                console.log('resetting')
+                world = [[0,0,0],[0,0,0],[0,0,0]]
+                resetCells()
+                winner = -1
+                gameOver = false
+                socket.emit('reset', roomID)
+            })
+            
+            socket.on('reset', function(){
+                world = [[0,0,0],[0,0,0],[0,0,0]]
+                resetCells()
+                winner = -1
+                gameOver = false
+            })
+
+
+            function resetCells(){
+                //i represents rows, j represents columns
+                var cell = 1
+                for (var i = 0; i < world.length; i++){
+                    for (var j = 0; j < world.length; j++){
+                        
+                        $('#' + String(cell)).children().css('display', 'none')
+                        cell++
+                    }
+                }
+            }
 
             function detectWinner(){
                 console.log(world)
@@ -121,12 +162,56 @@
                     gameOver = true
                     
                 }
+                if (gameOver) {
+                    return playerNumber
+                }
+                else {
+                    return -1
+                }
             }
+
+            function makeid() {
+                var text = "";
+                var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+                for (var i = 0; i < 15; i++)
+                    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+                return text;
+            }
+
+            $("#gameChatSubmit").click(function(){
+                if ($("#gameChatText").val() != ""){
+                    var newChat = "<p class = 'chats222'> You: " + $("#gameChatText").val() + "</p>"
+                    $('#gameInner').append(newChat)
+                    socket.emit("newGameChat", {message : $("#gameChatText").val(), ID : roomID, player : playerNumber})
+                    $("#gameChatText").val("")
+                }
+            })
+            
+            socket.on('newGameChat', function(data){
+                if (data.player != playerNumber){
+                    var newChat = "<p class = 'chats222'> Opponent: " + data.message + "</p>"
+                    $('#gameInner').append(newChat)
+                }
+            })
+
+            $("#worldChatSubmit").click(function(){
+                if ($("#worldChatText").val() != ""){
+                    var newChat = "<p class = 'chats222'> You: " + $("#worldChatText").val() + "</p>"
+                    $('#worldInner').append(newChat)
+                    socket.emit("newWorldChat", {message : $("#worldChatText").val(), playerID : playerID})
+                    $("#worldChatText").val("")
+                }
+            })
+
+            socket.on('newWorldChat', function(data){
+                if (data.playerID != playerID){
+                    var newChat = "<p class = 'chats222'> Someone says: " + data.message + "</p>"
+                    $('#worldInner').append(newChat)
+                }
+            })
          })
-
-
-
-     //more game logic
      
      
     </script>
@@ -191,7 +276,7 @@
             overflow: scroll;
         }
         .gamechat{
-
+            background-color: yellow;
         }
         .worldchat{
             display: none;
@@ -214,6 +299,7 @@
             height: 140px;
             margin-left: 1.5%;
             margin-top: 1.5%;
+            vertical-align: top;
         }
         .text{
             width: 85%;
@@ -232,7 +318,39 @@
             text-shadow: 1px 1px black;
 
         }
-        
+        #y{
+            display: none;
+            width: 100%;
+            padding-left: 19%;
+            width: 100%;
+        }
+        #x{
+            display: none;
+            width: 100%;
+            padding-bottom: 0%;
+            width: 100%;
+            padding-top: 0%;
+        }
+        .x{
+            width: 100%;
+            margin-top: 30px;
+        }
+        .y{
+            width: 60%;
+        }
+        button{
+            border-radius: 2px;
+        }
+        #GC{
+            margin-left: 2%;
+        }
+        .hr{
+            color: black;
+            width: 55%;
+            margin-top: -20px;
+            margin-left: 3px;
+
+        }
     </style>
 </head>
 <body id="body">
@@ -240,16 +358,46 @@
     <div class="Game">
         <h3 class="player">Player #</h3>
         <div class="inner1">
-            <div class="d" id = '1' row = '0' column = "0"></div>
-            <div class="d" id = '2' row = '0' column = "1"></div>
-            <div class="d" id = '3' row = '0' column = "2"></div>
-            <div class="d" id = '4' row = '1' column = "0"></div>
-            <div class="d" id = '5' row = '1' column = "1"></div>
-            <div class="d" id = '6' row = '1' column = "2"></div>
-            <div class="d" id = '7' row = '2' column = "0"></div>
-            <div class="d" id = '8' row = '2' column = "1"></div>
-            <div class="d" id = '9' row = '2' column = "2"></div>
+            <div class="d" id = '1' row = '0' column = "0">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+
+            <div class="d" id = '2' row = '0' column = "1">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '3' row = '0' column = "2">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '4' row = '1' column = "0">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '5' row = '1' column = "1">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '6' row = '1' column = "2">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '7' row = '2' column = "0">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '8' row = '2' column = "1">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            <div class="d" id = '9' row = '2' column = "2">
+                <div id="x"><img class="x" src="/images/x.png" alt="x image"></div>
+                <div id="y"><img class="y" src="/images/y.png" alt="y image"></div>
+            </div>
+            
         </div>
+
 
     </div>
     <div class="Chat">
@@ -257,25 +405,23 @@
 
         <button id="GC">GameChat</button>
         <button id="WC">WorldChat</button>
+        <button id = 'reset'>New Game</button>
 
         <div class="gamechat">
-            <div class="inner">
-            <p class="chats222">game chats</p>
+            <div  class = 'inner' id="gameInner">
+                <p class="chats222">game chats</p>
             </div>
-            <form action="">
-                <span><input class="text" type="text"><input class="send" type="submit" value="Send"></span>
-            </form>
+            <span><input id = 'gameChatText' class="text" type="text"><input id = 'gameChatSubmit' class="send" type="submit" value="Send"></span>
         </div>
         <div class="worldchat">
-            <div class="inner">
-            <p class="chats222">world chats</p>
+            <div class = 'inner'id="worldInner">
+                <p class="chats222">world chats</p>
             </div>
-            <form action="">
-                <span><input class="text" type="text"><input class="send" type="submit" value="Send"></span>
-            </form>
+            <span><input id = 'worldChatText' class="text" type="text"><input id = 'worldChatSubmit' class="send" type="submit" value="Send"></span>
         </div>
         <div class="recent">
             <h3 class="rg">Recent Games</h3>
+            <hr class="hr">
             <div class="rgs">
                 <p class="chats222">none</p>
             </div>
