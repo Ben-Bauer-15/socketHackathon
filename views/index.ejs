@@ -1,0 +1,53 @@
+<html>
+<head>
+    <title>mean hackathon</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type ="text/javascript">
+        $(document).ready(function (){
+            
+         })
+    </script>
+    <style>
+        #body{
+            background-color: grey;
+        }
+        .h1{
+            font-size: 48;
+
+            text-align: center;
+            margin-bottom: 100px;
+            text-shadow: 1px 1px red;
+        }
+        .text{
+            width: 300px;
+            height: 30px;
+            border: 1px rgba(0, 0, 0, 0.774) solid;
+            text-align: center;
+        }
+        .form{
+
+            text-align: center;
+        }
+        .button{
+            border: 1px rgba(0, 0, 0, 0.774) solid;
+            font-size: 15px;
+        }
+        .img{
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body id="body">
+    <h1 class="h1">Tic Tac Toe</h1> 
+    
+    <form class="form" action="">
+        <input class="text" placeholder="Enter a username!" type="text">
+        <input class="button" type="submit" value="->">
+        <br>
+        <img class="img" src="/images/tic.png" alt="tic Tac gif">
+    </form>
+    <a href="/game">back door</a>
+    
+</body>
+</html>

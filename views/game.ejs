@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>mean hackathon</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type ="text/javascript">
+        $(document).ready(function (){
+            
+            //logic for changing chat displays
+            $("#GC").click(function(){
+                $(".gamechat").css({"display": "block"})
+                $(".worldchat").css({"display": "none"})
+            })
+            $("#WC").click(function(){
+                $(".worldchat").css({"display": "block"})
+                $(".gamechat").css({"display": "none"})
+            })
+
+
+            //socket logic
+            var roomID;
+            var gameOver = false
+            var playerNumber;
+            var playerTurn = 1
+            var socket = io()
+            var world = [[0,0,0],[0,0,0],[0,0,0]]
+            var worldDict = {0 : "yellow", 1 : "blue", 2 : "red"}
+
+            socket.on('welcome', (data) => {
+                roomID = data.roomID
+                playerNumber = data.playerNumber
+                console.log("Player number is: " + playerNumber)
+                console.log("room number is : " + roomID)
+            })
+
+            socket.on("greeting", function(data){
+                console.log(data)
+            })
+
+            socket.on("updatedGame", function(data){
+                world = data.world
+                gameOver = data.isGameOver
+                playerTurn = data.turn
+                //i represents rows, j represents columns
+                var cell = 1
+                for (var i = 0; i < data.world.length; i++){
+                    for (var j = 0; j < data.world.length; j++){
+                        console.log("our cell is " + cell)
+                        console.log("our color is  " + worldDict[i][j])
+                        
+                        $('#' + String(cell)).css('background-color', worldDict[world[i][j]])
+                        cell++
+                    }
+                }
+            })
+
+            $("#sendMsg").click(() => {
+                socket.emit('newMsg', {message : "hello everyone in room: " + roomID, ID : roomID})
+            })
+
+
+            //game logic
+            $('.d').click(function(){
+                console.log(world)
+                if (playerTurn == playerNumber && world[$(this).attr('row')][$(this).attr('column')] == 0 && !gameOver){
+                    $(this).css("background-color", worldDict[playerNumber])
+                    world[$(this).attr('row')][$(this).attr('column')] = playerNumber
+                    if (playerTurn == 1){
+                        playerTurn = 2
+                    }
+                    else {
+                        playerTurn = 1
+                    }
+                    detectWinner()
+                    socket.emit('userClicked', {ID : roomID, worldArr : world, turn : playerTurn, isGameOver : gameOver})
+                }
+                // else if (playerTurn == 1 && world[$(this).attr('row')][$(this).attr('column')] == 0) {
+                //     $(this).css("background-color", 'red')
+                //     world[$(this).attr('row')][$(this).attr('column')] = 2
+                //     playerTurn = 0
+                // }
+            })
+
+            function detectWinner(){
+                console.log(world)
+                if (world[0][0] == world[0][1] && world[0][1] == world[0][2] && world[0][0] != 0) {
+                    gameOver = true
+                    
+                }
+                if (world[1][0] == world[1][1] && world[1][1] == world[1][2] && world[1][0] != 0){
+                    gameOver = true
+                    
+                }
+                if (world[2][0] == world[2][1] && world[2][1] == world[2][2] && world[2][0] != 0) {
+                    gameOver = true
+                    
+                }
+                
+                if (world[0][0] == world[1][0] && world[1][0] == world[2][0] && world[2][0] != 0) {
+                    gameOver = true
+                    
+                }
+                
+                if (world[0][1] == world[1][1] && world[1][1] == world[2][1] && world[2][1] != 0) {
+                    gameOver = true
+                    
+                }
+                if (world[0][2] == world[1][2] && world[1][2] == world[2][2] && world[2][2] != 0) {
+                    gameOver = true
+                    
+                }
+                if (world[0][0] == world[1][1] && world[1][1] == world[2][2] && world[2][2] != 0) {
+                    gameOver = true
+                    
+                }
+                if (world[0][2] == world[1][1] && world[1][1] == world[2][0] && world[2][0] != 0) {
+                    gameOver = true
+                    
+                }
+            }
+         })
+
+
+
+     //more game logic
+     
+     
+    </script>
+    <style>
+        #body{
+            background-color: grey;
+        }
+        .h1{
+            font-size: 48;
+
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 1px 1px yellow;
+
+        }
+        .username{
+            text-align: center;
+            color: white;
+
+        }
+        .Game{
+
+            width: 60%;
+            min-height: 100px;
+            margin-left: 4%;
+            margin-right: 1%;
+            display: inline-block;
+            border: 1px rgba(0, 0, 0, 0.774) solid;
+            background-color: black;
+        }
+        .Chat{
+            width: 31%;
+            min-height: 100px;
+            display: inline-block;
+            vertical-align: top;
+            border: 1px rgba(0, 0, 0, 0.774) solid;
+            background-color: black;
+
+        }
+        .recent{
+            background-image: linear-gradient(yellow, black);
+            width: 100%;
+            height: 100px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .player{
+            text-align: center;
+            color: white;
+
+
+        }
+        .inner1{
+            background-image: linear-gradient(black, grey);
+            height: 475px;
+            width: 100%;
+        }
+        .inner{
+            background-image: linear-gradient(black, yellow);
+            height: 335px;
+            width: 100%;
+            overflow: scroll;
+        }
+        .gamechat{
+
+        }
+        .worldchat{
+            display: none;
+        }
+        .rg{
+            margin-left: 5px;
+            color: black;
+        }
+        .rgs{
+
+            overflow: scroll;
+
+            height: 40px;
+            margin-top: -10px;
+        }
+        .d{
+            display: inline-block;
+            width: 31%;
+            background-color: yellow;
+            height: 140px;
+            margin-left: 1.5%;
+            margin-top: 1.5%;
+        }
+        .text{
+            width: 85%;
+            border: 1px rgba(0, 0, 0, 0.774) solid;
+            height: 15px;
+            margin-left: 1%
+
+        }
+        .send{
+            border: 1px rgba(0, 0, 0, 0.774) solid;
+            margin-left: 1%;
+        }
+        .chats222{
+            color: white;
+            margin-left: 1%;
+            text-shadow: 1px 1px black;
+
+        }
+        
+    </style>
+</head>
+<body id="body">
+    <h1 class="h1">Tic Tac Toe</h1>
+    <div class="Game">
+        <h3 class="player">Player #</h3>
+        <div class="inner1">
+            <div class="d" id = '1' row = '0' column = "0"></div>
+            <div class="d" id = '2' row = '0' column = "1"></div>
+            <div class="d" id = '3' row = '0' column = "2"></div>
+            <div class="d" id = '4' row = '1' column = "0"></div>
+            <div class="d" id = '5' row = '1' column = "1"></div>
+            <div class="d" id = '6' row = '1' column = "2"></div>
+            <div class="d" id = '7' row = '2' column = "0"></div>
+            <div class="d" id = '8' row = '2' column = "1"></div>
+            <div class="d" id = '9' row = '2' column = "2"></div>
+        </div>
+
+    </div>
+    <div class="Chat">
+        <h3 class="username">username</h3>
+
+        <button id="GC">GameChat</button>
+        <button id="WC">WorldChat</button>
+
+        <div class="gamechat">
+            <div class="inner">
+            <p class="chats222">game chats</p>
+            </div>
+            <form action="">
+                <span><input class="text" type="text"><input class="send" type="submit" value="Send"></span>
+            </form>
+        </div>
+        <div class="worldchat">
+            <div class="inner">
+            <p class="chats222">world chats</p>
+            </div>
+            <form action="">
+                <span><input class="text" type="text"><input class="send" type="submit" value="Send"></span>
+            </form>
+        </div>
+        <div class="recent">
+            <h3 class="rg">Recent Games</h3>
+            <div class="rgs">
+                <p class="chats222">none</p>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>
